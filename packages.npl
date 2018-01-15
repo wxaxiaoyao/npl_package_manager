@@ -1,0 +1,67 @@
+NPL.load("(gl)script/ide/commonlib.lua")
+
+local packages = {}
+
+-- 构造实例
+function packages:new()
+	local obj = {}
+
+	setmetatable(obj, self)
+	self.__index = self
+
+	return obj
+end
+
+-- 加载已安装的包的列表
+function packages:load(path)
+	self.package_list_path = path
+	self.package_list = commonlib.LoadTableFromFile(path) or {}  -- 加载已安装的包的列表
+	
+	return self.package_list
+end
+
+-- 添加包
+function packages:insert_package(package)
+	if not package.name or not package.version then
+		return 
+	end
+
+	self:delete_package(package)
+	table.insert(self.package_list, package)
+end
+
+-- 删除包
+function packages:delete_package(package)
+	for i, x in ipairs(self.package_list or {}) do
+		if x.name == package.name and x.version == package.version then
+			table.remove(self.package_list, i)
+			return
+		end
+	end
+end
+
+-- 判断包是否存在
+function packages:is_exist(package)
+	for _, x in ipairs(self.package_list or {}) do
+		if x.name == package.name and x.version == package.version then
+			return true
+		end
+	end
+	return false
+end
+
+function packages:save()
+	--return commonlib.SaveTableToFile(self.package_list, self.package_list_path, true)
+	local str = commonlib.serialize2(self.package_list, 1)
+	local file = io.open(self.package_list_path, "w")
+	if not file then
+		return false
+	end
+
+	file:write(str)
+	file:close()
+
+	return true
+end
+
+return packages
