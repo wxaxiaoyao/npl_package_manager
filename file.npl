@@ -1,0 +1,42 @@
+
+local file = {}
+
+-- 判断文件是否存在
+function file:is_exist(filename)
+	return (g_lfs.attributes(filename))
+end
+
+-- 获取文件内容
+function file:read(filename)
+	local f = io.open(filename, "r")
+
+	if not f then
+		return 
+	end
+
+	local content = f:read("*a")
+
+	f:close()
+
+
+	return content
+end
+
+-- 写文件
+function file:write(filename, content)
+	local f = io.open(filename, "w")
+
+	if not f then
+		return false
+	end
+
+	local content = f:write(content)
+
+	f:close()
+
+
+	return true
+end
+
+return file
+

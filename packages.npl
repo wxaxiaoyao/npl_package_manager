@@ -32,12 +32,56 @@ end
 
 -- 删除包
 function packages:delete_package(package)
+	local pkg = nil
 	for i, x in ipairs(self.package_list or {}) do
 		if x.name == package.name and x.version == package.version then
 			table.remove(self.package_list, i)
-			return
+			pkg = x
+			break
 		end
 	end
+
+	if not pkg then
+		return
+	end
+
+	--local dirname = string.gsub(pkg.install_dir, "/$", "")
+	local dirname = pkg.install_dir 
+	commonlib.Files.DeleteFolder(dirname)
+end
+
+-- 通过包名获取
+function packages:get_by_name(package_name)
+	local list = {}
+	for i, x in ipairs(self.package_list or {}) do
+		if x.name == package_name then
+			table.insert(list, x)
+		end
+	end
+
+	return list
+end
+
+-- 获取包
+function packages:get(package) 
+	local result = nil
+	for i, x in ipairs(self.package_list or {}) do
+		if x.name == package.name then
+			if package.version then
+				if package.version == x.version then
+					return x
+				end
+			else
+				if not result then
+					result = x
+				elseif string_compare(result.version, x.version) < 0 then
+					result = x
+				end
+			end
+		end
+	end
+
+	return result
 end
 
 -- 判断包是否存在
