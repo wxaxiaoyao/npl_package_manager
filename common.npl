@@ -7,6 +7,7 @@ NPL.load("geturl.npl")
 
 log = NPL.load("log.npl")
 g_packages = NPL.load("packages.npl")
+g_file = NPL.load("file.npl")
 --local packages = NPL.load("packages.npl")
 --local g_packages = packages:new()
 

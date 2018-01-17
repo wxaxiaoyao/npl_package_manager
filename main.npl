@@ -2,10 +2,6 @@
 NPL.load("common.npl")
 
 local npm = NPL.load("npm.npl")
-local file = NPL.load("file.npl")
-
-
-
 
 -- 加载包
 local function load_package(args)
@@ -91,7 +87,7 @@ local function npm_init(ctx)
 	args.repository = {}
 	args.download_url = nil
 
-	if file:is_exist(package_config_filename) then
+	if g_file:is_exist(package_config_filename) then
 		log.fatal("包配置文件已存在")
 		if not force then
 			return
@@ -100,7 +96,7 @@ local function npm_init(ctx)
 	end
 
 	local content = commonlib.serialize2(args, 1)
-	if not file:write(package_config_filename, content) then
+	if not g_file:write(package_config_filename, content) then
 		log.fatal("写包配置文件失败")
 		return
 	end
@@ -129,6 +125,7 @@ local function npm_remove(ctx)
 	local package_list = g_packages:get_by_name(args.name)
 	for _, x in ipairs(package_list) do
 		g_packages:delete_package(x)
+		log.info("移除包:" .. x.name .. " 版本:" .. x.version)
 	end
 	g_packages:save()
 end
@@ -140,11 +137,13 @@ local function npm_install(ctx)
 	local ctx_args = ctx.arg or {}
 	local args = {}
 
+	local force = get_option_value(ctx_args, "-f") or get_option_value(ctx_args, "--force")
 	local package_name = string.match(ctx_args[2] or "", '^[%w%d]+$')
 	args.name = package_name or get_option_value(ctx_args, "--name=(.-)%s*$")
 	args.package_src = get_option_value(ctx_args, "--package_src=(.-)%s*$")
 	args.download_url = get_option_value(ctx_args, "--download_url=(.-)%s*$")
 	args.version = get_option_value(ctx_args, "--version=(.-)%s*$")
+	args.force = force
 
 	if not args.name then
 		log.fatal("缺少包名参数")

@@ -47,7 +47,7 @@ local function download_package_by_url(package_args)
 	local tmp_file_dir = g_package_path .. "/.tmp/"
 	local tmp_file = tmp_file_dir .. package_name .. ".zip";
 	--log.info("临时目录:", tmp_file_dir)
-	if not file_is_exist(tmp_file_dir) then
+	if not g_file:is_exist(tmp_file_dir) then
 		local ok, err = ParaIO.CreateDirectory(tmp_file_dir)
 		if not ok then
 			log("创建临时目录失败:" .. err)
@@ -57,13 +57,10 @@ local function download_package_by_url(package_args)
 
 	log("成功下载安装包:" .. download_url)
 	log("创建临时文件:", tmp_file)
-	local file = io.open(tmp_file, "w")
-	if not file then
+	if not g_file:write(tmp_file, data) then
 		log.fatal("无法创建临时文件:" .. tmp_file)
 		return false
 	end
-	file:write(data)
-	file:close()
 
 	result.package_zip_file = tmp_file
 
@@ -83,11 +80,11 @@ local function download_package_by_url(package_args)
 		end
 		local file = ParaIO.open(tmp_file_dir .. item.filename, "r")
 		if(file:IsValid()) then
-			local binData = file:GetText();
+			local content = file:GetText();
 			file:close();
 
 			result.package_config_filename = item.filename
-			result.package_config = binData
+			result.package_config = content
 			ParaAsset.CloseArchive(tmp_file);
 			--log(binData)
 			return true, result
@@ -129,7 +126,7 @@ local function install_package_by_zip(package)
 	local package_dir = g_package_path .. "/" .. package_config.name .. "/" .. package_config.version .. "/"
 	package.install_dir = package_dir
 	log.info("包路径:" .. package_dir)
-	if file_is_exist(package_dir) then
+	if g_file:is_exist(package_dir) then
 		log.info("包已存在, 删除旧目录...")
 		commonlib.Files.DeleteFolder(package_dir)
 		--return false
@@ -155,16 +152,12 @@ local function install_package_by_zip(package)
 				ParaIO.CreateDirectory(file_dir)
 				local file = ParaIO.open(tmp_file_dir .. item.filename, "r")
 				if file:IsValid() then
-					local binData = file:GetText(0, -1);
+					local content = file:GetText(0, -1);
 					file:close();
 
 					log("写文件:", filename)
 					--log("文件内容", binData)
-					local new_file = io.open(filename, "w")
-					if new_file then
-						new_file:write(binData, #binData)
-						new_file:close()
-					else 
+					if not g_file:write(filename, content) then
 						log.warn("写文件出错:" .. filename)
 					end
 				end
@@ -180,7 +173,7 @@ local function install_package_by_zip(package)
 
 	-- 加载执行包安装脚本
 	local install_file = package_dir .. "install.lua"
-	if file_is_exist(install_file) then
+	if g_file:is_exist(install_file) then
 		pcall(function()
 			NPL.load(install_file)
 		end)
@@ -278,6 +271,7 @@ function npm:install_package(package_args)
 		end
 		log.info("依赖包:" .. key)
 
+		args.force = package_args.force
 		if not self:install_package(args) then
 			log.fatal("安装包依赖失败")
 			clean_tmp_package(package)
@@ -286,7 +280,7 @@ function npm:install_package(package_args)
 	end
 
 	-- 检测是否已安装
-	if g_packages:is_exist(package_config) then
+	if not package_args.force and g_packages:is_exist(package_config) then
 		log.info("包已安装...")
 		clean_tmp_package(package)
 		return true

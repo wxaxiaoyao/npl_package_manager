@@ -26,7 +26,6 @@ function packages:insert_package(package)
 		return 
 	end
 
-	self:delete_package(package)
 	table.insert(self.package_list, package)
 end
 

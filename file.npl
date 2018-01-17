@@ -6,37 +6,66 @@ function file:is_exist(filename)
 	return (g_lfs.attributes(filename))
 end
 
--- 获取文件内容
-function file:read(filename)
-	local f = io.open(filename, "r")
+-- lua 读文件
+--function file:read(filename)
+	--local f = io.open(filename, "r")
 
-	if not f then
-		return 
+	--if not f then
+		--return 
+	--end
+
+	--local content = f:read("*a")
+
+	--f:close()
+
+
+	--return content
+--end
+
+---- lua 写文件
+--function file:write(filename, content)
+	--local f = io.open(filename, "w")
+
+	--if not f then
+		--return false
+	--end
+
+	--local content = f:write(content)
+
+	--f:close()
+
+
+	--return true
+--end
+
+-- npl 读文件
+function file:read(filename) 
+	local f = ParaIO.open(filename, "r")
+	if not f:IsValid() then
+		return
 	end
 
-	local content = f:read("*a")
-
+	local content = f:GetText(0, -1)
 	f:close()
 
 
 	return content
 end
 
--- 写文件
+-- npl 写文件
 function file:write(filename, content)
-	local f = io.open(filename, "w")
-
-	if not f then
+	local f = ParaIO.open(filename, "w")
+	if not f:IsValid() then
 		return false
 	end
 
-	local content = f:write(content)
-
+	f:WriteString(content, #content)
+	
 	f:close()
-
 
 	return true
 end
+
 
 return file
 
