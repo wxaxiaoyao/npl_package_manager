@@ -294,7 +294,7 @@ return function(ctx)
 	
 	local package_args = {}
 	local cmd_name = args[1]
-	log(ctx)
+	--log(ctx)
 	if cmd_name == "install" then
 		-- npm install 安装包
 		npm_install(ctx)

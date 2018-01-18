@@ -3,9 +3,9 @@
         ["nws"] = {
           ["package_src"] = "wxaxiaoyao/nws",
         },
+        ["demo"] = "1.0.0",
         ["keepwork"] = "1.0.0",
         ["test"] = "1.0.0",
-        ["demo"] = "1.0.0",
       },
       ["name"] = "keepwork",
       ["version"] = "1.0.0",

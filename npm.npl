@@ -79,7 +79,7 @@ local function download_package_by_url(package_args)
 			ParaAsset.CloseArchive(tmp_file);
 			return false
 		end
-		log(filesOut)
+		--log(filesOut)
 		local item = filesOut[1]
 		for _, x in ipairs(filesOut) do
 			if #x.filename < #item.filename then

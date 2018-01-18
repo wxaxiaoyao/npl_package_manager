@@ -21,8 +21,8 @@ end
 
 -- 字符串比较
 function string_compare(str1, str2)
-	local str_byte1 = string.byte(str1, 1, #str1)
-	local str_byte2 = string.byte(str2, 1, #str2)
+	--local str_byte1 = string.byte(str1, 1, #str1)
+	--local str_byte2 = string.byte(str2, 1, #str2)
 
 	--for i, _ in ipairs(str_byte1) do
 		--local n1 = str_byte1[i] or 0
