@@ -1,7 +1,18 @@
-local t = {1,2,3,4}
-table.remove(t,1,3)
 
-for _, x in ipairs(t) do
-	print(x)
+NPL.load("(gl)script/ide/commonlib.lua")
+NPL.load("(gl)script/ide/System/os/GetUrl.lua")
+NPL.load("(gl)script/ide/Files.lua")
+
+
+local path = "/root/workspace/npl/nplproject/npl_package_manager"
+local name = "abcd"
+local zipname = path .. "/" .. name .. ".zip"
+--local writer = ParaIO.CreateZip(zipname, "")
+--writer:AddDirectory(name .. "/", path .. "/*.*", 10000)
+--writer:ZipAdd("file.npl", path .. "/file.npl")
+--writer:ZipAdd("file_test.npl", path .. "/file_test.npl")
+local result = {}
+commonlib.Files.Find(result, path .. "/", 1000, 10000, "*.*", nil)
+for k, v in pairs(result) do
 end
-
+--writer:close()

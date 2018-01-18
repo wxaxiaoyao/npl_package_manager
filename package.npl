@@ -3,9 +3,9 @@
         ["nws"] = {
           ["package_src"] = "wxaxiaoyao/nws",
         },
-        ["test"] = {
-          ["download_url"] = "http://localhost:9000/test.zip",
-        },
+        ["keepwork"] = "1.0.0",
+        ["test"] = "1.0.0",
+        ["demo"] = "1.0.0",
       },
       ["name"] = "keepwork",
       ["version"] = "1.0.0",

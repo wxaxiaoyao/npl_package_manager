@@ -1,4 +1,6 @@
 
+NPL.load("common.npl")
+
 local npm = {}
 
 -- 解析包
@@ -72,12 +74,19 @@ local function download_package_by_url(package_args)
 		local filesOut = {};
 		--commonlib.Files.Find(filesOut, "", 0, 10000, ":package.npl", zipPath);
 		commonlib.Files.Find(filesOut, "", 0, 10000, ":^[^/]*/?package.npl$", tmp_file);
-		local item = filesOut[1]
-		if not item then
+		if #filesOut == 0 then
 			log.fatal("安装包内没有配置文件")
 			ParaAsset.CloseArchive(tmp_file);
 			return false
 		end
+		log(filesOut)
+		local item = filesOut[1]
+		for _, x in ipairs(filesOut) do
+			if #x.filename < #item.filename then
+				item = x
+			end
+		end
+
 		local file = ParaIO.open(tmp_file_dir .. item.filename, "r")
 		if(file:IsValid()) then
 			local content = file:GetText();
@@ -138,6 +147,8 @@ local function install_package_by_zip(package)
 		return false
 	end
 
+	local package_config_filename = package.package_config_filename
+	local dir_prefix = string.match(package_config_filename, "(.*)package.npl$")
 	local package_name = package_config.name
 	local tmp_file = package.package_zip_file
 	local tmp_file_dir = string.gsub(tmp_file, "[^/]*$", "")
@@ -145,7 +156,10 @@ local function install_package_by_zip(package)
 		local filesOut = {};
 		commonlib.Files.Find(filesOut, "", 0, 100000, ":.", tmp_file);
 		for _,item in ipairs(filesOut) do 
-			local filename = string.gsub(item.filename, "^[^/]*/?", "")
+			local filename = item.filename
+			if dir_prefix then
+				filename = string.gsub(item.filename, "^" .. dir_prefix , "")
+			end
 			filename = package_dir .. filename
 			if item.filesize > 0 then
 				local file_dir = string.gsub(filename, "[^/]*$", "")

@@ -259,13 +259,42 @@ local function npm_compile(ctx)
 	log.info("已成功生成package.lock")
 end
 
+-- 打包目录
+local function npm_package(ctx)
+	local path = ctx.path .. "/"
+	local ctx_args = ctx.arg
+	local args = {}
+
+	local package_name = string.match(ctx_args[2] or "", '^[%w%d]+$')
+	args.name = package_name or get_option_value(ctx_args, "--name=(.-)%s*$")
+
+	if not args.name then
+		log.fatal("缺少参数")
+		return
+	end
+
+	local zipname = path .. args.name .. ".zip"
+	local writer = ParaIO.CreateZip(zipname, "")
+	local filelist = {}
+	commonlib.Files.Find(filelist, path, 1000, 1000000, "*.*", nil)
+	for _, x in ipairs(filelist) do
+		if x.fileattr == 0 then
+			writer:ZipAdd(x.filename, path .. x.filename)
+		elseif x.fileattr == 16 then
+			writer:ZipAddFolder(x.filename)
+		end
+	end
+	--writer:AddDirectory(args.name .. "/", path .. "/*.npl", 10000)
+	writer:close()
+end
+
 -- 入口函数
 return function(ctx)
 	local args = ctx.arg
 	
 	local package_args = {}
 	local cmd_name = args[1]
-	--log(args)
+	log(ctx)
 	if cmd_name == "install" then
 		-- npm install 安装包
 		npm_install(ctx)
@@ -284,6 +313,8 @@ return function(ctx)
 	elseif cmd_name == "loader" then
 		-- npm loader 加载包配置
 		npm_loader(ctx)
+	elseif cmd_name == "package" then
+		npm_package(ctx)
 	end
 end
 
