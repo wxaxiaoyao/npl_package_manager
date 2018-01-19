@@ -262,20 +262,30 @@ end
 -- 打包目录
 local function npm_package(ctx)
 	local path = ctx.path .. "/"
+	local package_config_filename = path .. "package.npl"
 	local ctx_args = ctx.arg
 	local args = {}
 
-	local package_name = string.match(ctx_args[2] or "", '^[%w%d]+$')
-	args.name = package_name or get_option_value(ctx_args, "--name=(.-)%s*$")
+	--local package_name = string.match(ctx_args[2] or "", '^[%w%d]+$')
+	--args.name = package_name or get_option_value(ctx_args, "--name=(.-)%s*$")
 
-	if not args.name then
-		log.fatal("缺少参数")
+	--if not args.name then
+		--log.fatal("缺少参数")
+		--return
+	--end
+
+	local package_config = commonlib.LoadTableFromFile(package_config_filename)
+	if not package_config or not package_config.name or not package_config.version then
+		log.fatal("包配置文件解析失败")
 		return
 	end
 
-	local zipname = path .. args.name .. ".zip"
+	local zipname = path .. package_config.name .. ".zip"
 	local writer = ParaIO.CreateZip(zipname, "")
 	local filelist = {}
+
+	--log(zipname)
+
 	commonlib.Files.Find(filelist, path, 1000, 1000000, "*.*", nil)
 	for _, x in ipairs(filelist) do
 		if x.fileattr == 0 then
@@ -286,6 +296,26 @@ local function npm_package(ctx)
 	end
 	--writer:AddDirectory(args.name .. "/", path .. "/*.npl", 10000)
 	writer:close()
+
+	local params = {
+		name = package_config.name,
+		version = package_config.version,
+		username = "xiaoyao",
+		content = encode_base64(g_file:read(package_config_filename) or ""),
+	}
+
+	local res = get_url({
+		method = "POST",
+		url = "http://localhost:8888/api/v1/wikimod/npl_package_manager/package/upload",
+		data = params,
+	})
+
+	if res.status_code ~= 200 then
+		log.fatal("上传包失败:", res.data)
+		return
+	end
+
+	log(res.data)
 end
 
 -- 入口函数

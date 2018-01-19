@@ -2,6 +2,9 @@
 NPL.load("(gl)script/ide/commonlib.lua")
 NPL.load("(gl)script/ide/System/os/GetUrl.lua")
 NPL.load("(gl)script/ide/Files.lua")
+NPL.load("(gl)script/ide/Encoding.lua") 
+
+local Encoding = commonlib.gettable("commonlib.Encoding")
 
 log = NPL.load("log.npl")
 g_packages = NPL.load("packages.npl")
@@ -78,7 +81,7 @@ end
 	--return res
 --end
 
-function get_url(params, callback)
+function get_url(params)
 	local method = params.method or "GET"
 
 	if string.upper(method) == "GET" then
@@ -86,8 +89,23 @@ function get_url(params, callback)
 	else
 		params.form = params.data
 	end
+	
+	if params.headers then
+		params.headers['Content-Type'] = params.headers['Content-Type'] or "application/json"
+	else
+		params.headers = {['Content-Type'] = "application/json"}
+	end
 
 	local _, data = System.os.GetUrl(params)
 	data.status_code = data.rcode
 	return data
+end
+
+
+function encode_base64(text)
+	return Encoding.base64(text)
+end
+
+function decode_base64(text)
+	return Encoding.unbase64(text)
 end
