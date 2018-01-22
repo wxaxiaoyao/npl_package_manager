@@ -1,5 +1,16 @@
 
-NPL.load("common.npl")
+local common = NPL.load("common.npl")
+local log = NPL.load("log.npl")
+local g_log = common.log
+local g_packages = common.packages
+local g_file = common.file
+local g_lfs = common.lfs
+local g_config = common.config
+local g_package_path = common.package_path
+local string_compare = common.string_compare
+local get_url = common.get_url
+local encode_base64 = common.encode_base64
+local decode_base64 = common.decode_base64
 
 local npm = NPL.load("npm.npl")
 
@@ -7,13 +18,27 @@ local function get_option_value(args, option)
 	local option_value = nil
 	for _, x in ipairs(args or {}) do
 		option_value = string.match(x, option)
-		--log(option_value, option)
+		--g_log(option_value, option)
 		if option_value then
 			return option_value
 		end
 	end
 
 	return nil
+end
+
+local function npm_init_usage()
+	print([[
+nplc init 包名 [选项]
+选项:
+--name           包名, 优先命令中包名  
+--version        版本号, 默认1.0.0
+--author         作者
+
+示例:
+nplc init demo --version=1.0.0
+
+	]])
 end
 
 local function npm_init(ctx)
@@ -30,7 +55,9 @@ local function npm_init(ctx)
 	args.author = get_option_value(ctx_args, "--author=(.-)%s*$") or "unknow"
 
 	if not args.name then
-		log.fatal("缺少包名参数")
+		g_log.fatal("缺少包名参数")
+
+		npm_init_usage()
 		return
 	end
 
@@ -42,20 +69,20 @@ local function npm_init(ctx)
 	args.download_url = nil
 
 	if g_file:is_exist(package_config_filename) then
-		log.fatal("包配置文件已存在")
+		g_log.fatal("包配置文件已存在")
 		if not force then
 			return
 		end
-		log.info("重新生成包配置文件")
+		g_log.info("重新生成包配置文件")
 	end
 
 	local content = commonlib.serialize2(args, 1)
 	if not g_file:write(package_config_filename, content) then
-		log.fatal("写包配置文件失败")
+		g_log.fatal("写包配置文件失败")
 		return
 	end
 
-	log.info("已生成包配置文件:" .. package_config_filename)
+	g_log.info("已生成包配置文件:" .. package_config_filename)
 	return
 end
 
@@ -73,37 +100,37 @@ local function npm_remove(ctx)
 	args.version = get_option_value(ctx_args, "--version=(.-)%s*$")
 
 	if not args.name then
-		log.fatal("参数错误")
+		g_log.fatal("参数错误")
 		return
 	end
 
 	if _local then
 		if not g_file:is_exist(package_config_filename) then
-			log.info("包配置文件不存在")
+			g_log.info("包配置文件不存在")
 			return
 		end
 		local package_config = commonlib.LoadTableFromFile(package_config_filename)
 		if not package_config then
-			log.info("包配置文件错误")
+			g_log.info("包配置文件错误")
 			return
 		end
 		package_config.dependencies = package_config.dependencies or {}
 		package_config.dependencies[args.name] = nil
 		commonlib.SaveTableToFile(package_config, package_config_filename, true)
-		log.info("已从配置文件中移除包:", args.name)
+		g_log.info("已从配置文件中移除包:", args.name)
 		return
 	end
 
 
 	if not args.name or (not all and not args.version) then
-		log.fatal("缺少参数")
+		g_log.fatal("缺少参数")
 		return
 	end
 
 	local package_list = g_packages:get_by_name(args.name)
 	for _, x in ipairs(package_list) do
 		g_packages:delete_package(x)
-		log.info("移除包:" .. x.name .. " 版本:" .. x.version)
+		g_log.info("移除包:" .. x.name .. " 版本:" .. x.version)
 	end
 	g_packages:save()
 end
@@ -114,18 +141,18 @@ local function npm_install_by_config(ctx)
 	local package_config_filename = ctx.path .. "/package.lock"
 	local config_file_type = "lock"
 	if not g_file:is_exist(package_config_filename) then
-		log.info("package.lock配置文件不存在")
+		g_log.info("package.lock配置文件不存在")
 		package_config_filename = ctx.path .. "/package.npl"
 		config_file_type = "npl"
 		if not g_file:is_exist(package_config_filename) then
-			log.info("package.npl配置文件不存在")
+			g_log.info("package.npl配置文件不存在")
 			return;
 		end
 	end
 
 	local package = commonlib.LoadTableFromFile(package_config_filename)
 	if not package then
-		log.fatal("配置文件格式错误")
+		g_log.fatal("配置文件格式错误")
 		return
 	end
 
@@ -173,21 +200,21 @@ local function npm_install(ctx)
 	args.force = force
 
 	if not args.name then
-		--log.fatal("缺少包名参数")
+		--g_log.fatal("缺少包名参数")
 		npm_install_by_config(ctx)
 		return
 	end
 
 	local ok, package = npm:install_package(args)
 	if not ok then
-		log.fatal("安装失败")
+		g_log.fatal("安装失败")
 		return
 	end
 
 	if _local and g_file:is_exist(package_config_filename) then
 		local package_config = commonlib.LoadTableFromFile(package_config_filename)
 		if not package_config then
-			log.info("配置文件格式错误")
+			g_log.info("配置文件格式错误")
 			return
 		end
 		package_config.dependencies = package_config.dependencies or {}
@@ -211,10 +238,10 @@ local function npm_loader(ctx)
 	local package_config_filename = ctx.path .. "/package.lock"
 
 	if not g_file:is_exist(package_config_filename) then
-		log.info("package.lock配置文件不存在")
+		g_log.info("package.lock配置文件不存在")
 		package_config_filename = ctx.path .. "/package.npl"
 		if not g_file:is_exist(package_config_filename) then
-			log.info("package.npl配置文件不存在")
+			g_log.info("package.npl配置文件不存在")
 			return;
 		end
 	end
@@ -222,12 +249,12 @@ local function npm_loader(ctx)
 	local package_list = npm:get_package_list_by_filename(package_config_filename)
 	for _, x in ipairs(package_list) do
 		npm:load_package(x)
-		log.info("加载包:" .. x.name .. " 版本:" .. x.version)
+		g_log.info("加载包:" .. x.name .. " 版本:" .. x.version)
 		-- 返回值有问题
 		--if not npm:load_package(x) then
-			--log.warn("包:" .. x.name .. "加载失败")
+			--g_log.warn("包:" .. x.name .. "加载失败")
 		--else 
-			--log.info("加载包:" .. x.name .. " 版本:" .. x.version)
+			--g_log.info("加载包:" .. x.name .. " 版本:" .. x.version)
 		--end
 	end
 end
@@ -239,83 +266,81 @@ local function npm_compile(ctx)
 	local force = get_option_value(ctx_args, "-f") or get_option_value(ctx_args, "--force")
 
 	if not g_file:is_exist(package_config_filename) then
-		log.fatal("package.npl配置文件不存在")
+		g_log.fatal("package.npl配置文件不存在")
 		return 
 	end
 
 	local package_lock_filename = ctx.path .. "/package.lock"
 	if not force and g_file:is_exist(package_lock_filename) then
-		log.fatal("package.lock配置文件已存在")
+		g_log.fatal("package.lock配置文件已存在")
 		return;
 	end
 
 	local package_list = npm:get_package_list_by_filename(package_config_filename)
 	local content = commonlib.serialize2(package_list, 1)
 	if not g_file:write(package_lock_filename, content) then
-		log.fatal("写文件失败:" .. package_lock_filename)
+		g_log.fatal("写文件失败:" .. package_lock_filename)
 		return
 	end
 
-	log.info("已成功生成package.lock")
+	g_log.info("已成功生成package.lock")
 end
 
 -- 打包目录
 local function npm_package(ctx)
 	local path = ctx.path .. "/"
 	local package_config_filename = path .. "package.npl"
-	local ctx_args = ctx.arg
-	local args = {}
-
-	--local package_name = string.match(ctx_args[2] or "", '^[%w%d]+$')
-	--args.name = package_name or get_option_value(ctx_args, "--name=(.-)%s*$")
-
-	--if not args.name then
-		--log.fatal("缺少参数")
-		--return
-	--end
 
 	local package_config = commonlib.LoadTableFromFile(package_config_filename)
 	if not package_config or not package_config.name or not package_config.version then
-		log.fatal("包配置文件解析失败")
+		g_log.fatal("包配置文件解析失败")
 		return
 	end
 
 	local zipname = path .. package_config.name .. ".zip"
 	local writer = ParaIO.CreateZip(zipname, "")
 	local filelist = {}
-
-	--log(zipname)
+	--g_log(zipname)
 
 	commonlib.Files.Find(filelist, path, 1000, 1000000, "*.*", nil)
-	for _, x in ipairs(filelist) do
-		if x.fileattr == 0 then
-			writer:ZipAdd(x.filename, path .. x.filename)
-		elseif x.fileattr == 16 then
-			writer:ZipAddFolder(x.filename)
-		end
-	end
-	--writer:AddDirectory(args.name .. "/", path .. "/*.npl", 10000)
+	--for _, x in ipairs(filelist) do
+		--if x.fileattr == 0 then
+			--writer:ZipAdd(package_config.name .. "/" .. x.filename, path .. x.filename)
+		--elseif x.fileattr == 16 then
+			--writer:ZipAddFolder(package_config.name .. "/" .. x.filename)
+		--end
+	--end
+	--writer:AddDirectory(package_config.name .. "/", path .. "/*.*", 10000)
+	writer:AddDirectory(package_config.name .. "/", "*.*", 10000)
 	writer:close()
 
 	local params = {
 		name = package_config.name,
 		version = package_config.version,
 		username = "xiaoyao",
-		content = encode_base64(g_file:read(package_config_filename) or ""),
+		content = encode_base64(g_file:read(zipname) or ""),
+		--content = "hello owrld",
 	}
 
 	local res = get_url({
 		method = "POST",
 		url = "http://localhost:8888/api/v1/wikimod/npl_package_manager/package/upload",
 		data = params,
+		json = true,
 	})
 
 	if res.status_code ~= 200 then
-		log.fatal("上传包失败:", res.data)
+		g_log.fatal("上传包失败:", res.data)
 		return
 	end
+	local data = res.data
 
-	log(res.data)
+	if data and data.error and data.error.id == 0 then
+		g_log("包已成功上传至服务器")
+	else 
+		g_log.fatal(data)
+		return
+	end
 end
 
 -- 入口函数
@@ -324,7 +349,7 @@ return function(ctx)
 	
 	local package_args = {}
 	local cmd_name = args[1]
-	--log(ctx)
+	--g_log(ctx)
 	if cmd_name == "install" then
 		-- npm install 安装包
 		npm_install(ctx)
