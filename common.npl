@@ -1,29 +1,4 @@
-
-NPL.load("(gl)script/ide/commonlib.lua")
-NPL.load("(gl)script/ide/System/os/GetUrl.lua")
-NPL.load("(gl)script/ide/Files.lua")
-NPL.load("(gl)script/ide/Encoding.lua") 
-
 local common = {}
-
-local g_lfs = commonlib.Files.GetLuaFileSystem()
-local g_config = NPL.load("config.npl")
-local g_log = NPL.load("log.npl")
-local g_packages = NPL.load("packages.npl")
-local g_file = NPL.load("file.npl")
-
-local g_package_path = g_config.global_package_path
-
-if not g_packages:load(g_package_path .. ".package.list") then
-	g_log.warn("加载全局包列表失败...")
-end
-
-common.config = g_file:read_table(g_config.config_filename) or g_config
-common.log = g_log
-common.packages = g_packages
-common.file = g_file
-common.lfs = g_lfs
-common.package_path = g_package_path
 
 -- 字符串比较
 function common.string_compare(str1, str2)

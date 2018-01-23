@@ -1,5 +1,3 @@
-NPL.load("(gl)script/ide/commonlib.lua")
-
 local common = NPL.load("common.npl")
 local packages = {}
 

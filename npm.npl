@@ -1,5 +1,5 @@
 
-local common = NPL.load("common.npl")
+local common = NPL.load("./common.npl")
 local g_log = common.log
 local g_packages = common.packages
 local g_file = common.file
