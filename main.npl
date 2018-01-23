@@ -29,14 +29,20 @@ end
 
 local function npm_init_usage()
 	print([[
+
 nplc init 包名 [选项]
+描述:
+    生成包配置文件
+
 选项:
 --name           包名, 优先命令中包名  
 --version        版本号, 默认1.0.0
+--force          强制(存在覆盖)
 --author         作者
+--help           打印帮助信息      短选项 -h
 
 示例:
-nplc init demo --version=1.0.0
+nplc init packagename --version=1.0.0
 
 	]])
 end
@@ -45,13 +51,18 @@ local function npm_init(ctx)
 	local path = ctx.path
 	local package_config_filename = path .. '/package.npl'
 	local force = false
-	local ctx_args = ctx.arg or {}
 	local args = {}
+	local ctx_args = ctx.arg or {}
+	local help = get_option_value(ctx_args, "-h") or get_option_value(ctx_args, "--help")
+	if help then
+		npm_init_usage()
+		return
+	end
 
 	local package_name = string.match(ctx_args[2] or "", '^[%w%d]+$')
 	force = get_option_value(ctx_args, "-f") or get_option_value(ctx_args, "--force")
 	args.name = package_name or get_option_value(ctx_args, "--name=(.-)%s*$")
-	args.version = get_option_value(ctx_args, "--version=(.-)%s*$") or "1.0.0"
+	args.version = get_option_value(ctx_args, "-v=(.-)%s*$") or get_option_value(ctx_args, "--version=(.-)%s*$") or "1.0.0"
 	args.author = get_option_value(ctx_args, "--author=(.-)%s*$") or "unknow"
 
 	if not args.name then
@@ -65,7 +76,7 @@ local function npm_init(ctx)
 	args.keywords = {args.name, args.author}
 	args.rendme = "README.md"
 	args.dependencies = {}
-	args.repository = {}
+	--args.repository = {}
 	args.download_url = nil
 
 	if g_file:is_exist(package_config_filename) then
@@ -86,41 +97,61 @@ local function npm_init(ctx)
 	return
 end
 
+local function npm_remove_usage() 
+	print([[
+nplc remove 包名 [选项]
+    移除包
+
+选项:
+--name           包名, 优先命令中包名  
+--all            移除指定包的所有版本   短选项 -a
+--version        移除指定版本号         短选项 -v 
+--local          仅移除本地配置文件中的包依赖  短选项 -l
+--help           打印帮助信息           短选项 -h
+
+示例:
+nplc remove packagename --version=1.0.0
+nplc remove packagename -l
+nplc remove packagename -a
+
+	]])
+end
+
 -- 删除包
 local function npm_remove(ctx)
+	local args = {}
 	local path = ctx.path
 	local package_config_filename = path .. '/package.npl'
 	local ctx_args = ctx.arg or {}
-	local args = {}
+	local help = get_option_value(ctx_args, "-h") or get_option_value(ctx_args, "--help")
+	if help then
+		npm_remove_usage()
+		return
+	end
 
 	local package_name = string.match(ctx_args[2] or "", '^[%w%d]+$')
 	local all = get_option_value(ctx_args, "-a") or get_option_value(ctx_args, "--all")
 	local _local = get_option_value(ctx_args, "-l") or get_option_value(ctx_args, "--local")
 	args.name = package_name or get_option_value(ctx_args, "--name=(.-)%s*$")
-	args.version = get_option_value(ctx_args, "--version=(.-)%s*$")
+	args.version = get_option_value(ctx_args, "-v=(.-)%s*$") or get_option_value(ctx_args, "--version=(.-)%s*$")
 
 	if not args.name then
 		g_log.fatal("参数错误")
 		return
 	end
 
-	if _local then
-		if not g_file:is_exist(package_config_filename) then
-			g_log.info("包配置文件不存在")
-			return
-		end
-		local package_config = commonlib.LoadTableFromFile(package_config_filename)
-		if not package_config then
-			g_log.info("包配置文件错误")
-			return
-		end
+	local package_config = commonlib.LoadTableFromFile(package_config_filename)
+	if package_config then
+		--g_log.info("包配置文件错误")
+		--return
 		package_config.dependencies = package_config.dependencies or {}
 		package_config.dependencies[args.name] = nil
 		commonlib.SaveTableToFile(package_config, package_config_filename, true)
-		g_log.info("已从配置文件中移除包:", args.name)
-		return
+		if _local then
+			g_log.info("已从配置文件中移除包:", args.name)
+			return
+		end
 	end
-
 
 	if not args.name or (not all and not args.version) then
 		g_log.fatal("缺少参数")
@@ -183,6 +214,26 @@ local function npm_install_by_config(ctx)
 	--npm_compile({path=ctx.path, arg={}})
 end
 
+local function npm_install_usage()
+--name           包名, 优先命令中包名  
+	print([[
+nplc install [包源] [选项]
+选项:
+--name           包名
+--version        移除指定版本号                短选项 -v 
+--local          添加包依赖到本地配置文件      短选项 -l
+--force          是否强制安装(已存在覆盖)      短选项 -f
+--download_url   zip包下载地址
+--package_src    仅针对github库使用 username/repositoryname   
+--help           打印帮助信息                  短选项 -h
+
+示例:
+从包管理服务器安装: nplc install packagename   或 nplc install --name=packagename
+从github安装: nplc install username/packagename 或 nplc install --package_src=username/packagename
+从指定包地址安装: nplc install http://nplpackages/packagename.zip  或 nplc install --download_url=http://nplpackages/packagename.zip
+
+	]])
+end
 -- 安装包
 local function npm_install(ctx)
 	local path = ctx.path
@@ -190,16 +241,26 @@ local function npm_install(ctx)
 	local ctx_args = ctx.arg or {}
 	local args = {}
 
+	local help = get_option_value(ctx_args, "-h") or get_option_value(ctx_args, "--help")
+	if help then
+		npm_install_usage()
+		return
+	end
+
+	local package_src = nil
 	local force = get_option_value(ctx_args, "-f") or get_option_value(ctx_args, "--force")
 	local _local = get_option_value(ctx_args, "-l") or get_option_value(ctx_args, "--local")
-	local package_name = string.match(ctx_args[2] or "", '^[%w%d]+$')
-	args.name = package_name or get_option_value(ctx_args, "--name=(.-)%s*$")
-	args.package_src = get_option_value(ctx_args, "--package_src=(.-)%s*$")
+	if string.match(ctx_args[2] or "", '^[^-]+') then
+		package_src = ctx_args[2]
+	end
+
+	args.name = get_option_value(ctx_args, "--name=(.-)%s*$")
+	args.package_src = package_src or get_option_value(ctx_args, "--package_src=(.-)%s*$")
 	args.download_url = get_option_value(ctx_args, "--download_url=(.-)%s*$")
-	args.version = get_option_value(ctx_args, "--version=(.-)%s*$")
+	args.version = get_option_value(ctx_args, "-v=(.-)%s*$") or get_option_value(ctx_args, "--version=(.-)%s*$")
 	args.force = force
 
-	if not args.name then
+	if not args.name and not args.package_src and not args.download_url then
 		--g_log.fatal("缺少包名参数")
 		npm_install_by_config(ctx)
 		return
@@ -223,8 +284,57 @@ local function npm_install(ctx)
 	end
 end
 
+local function npm_list_usage()
+	print([[
+nplc list [选项]
+描述:
+    打印已安装的包列表
+
+选项:
+--local    打印本地配置依赖   短选项 -l
+--help     打印帮助信息       短选项 -h
+
+示例:
+nplc list
+
+	]])
+end
+
 -- 列出已安装的包
 local function npm_list(ctx)
+	local ctx_args = ctx.arg or {}
+	local help = get_option_value(ctx_args, "-h") or get_option_value(ctx_args, "--help")
+	local _local = get_option_value(ctx_args, "-l") or get_option_value(ctx_args, "--local")
+	if help then
+		npm_list_usage()
+		return
+	end
+
+	local path = ctx.path
+	local package_config_filename = ctx.path .. "/package.lock"
+
+	if _local then
+		if not g_file:is_exist(package_config_filename) then
+			--g_log.info("package.lock配置文件不存在")
+			package_config_filename = ctx.path .. "/package.npl"
+			if not g_file:is_exist(package_config_filename) then
+				g_log.info("package.npl配置文件不存在")
+				return;
+			end
+		end
+		local package_config = commonlib.LoadTableFromFile(package_config_filename)
+		print("依赖包列表:")
+		for k, x in pairs(package_config.dependencies or {}) do
+			if type(x) == "table" then 
+				print("包名:" .. k .. " 版本:" .. (x.version or "unknow"))
+			else
+				print("包名:" .. k .. " 版本:" .. x)
+			end
+		end
+
+		return
+	end
+
 	local package_list = g_packages:get_all()
 	print("已安装的包列表:")
 	for _, x in ipairs(package_list or {}) do
@@ -259,10 +369,32 @@ local function npm_loader(ctx)
 	end
 end
 
+local function npm_compile_usage()
+	print([[
+nplc list [选项]
+描述:
+	解析包配置文件, 生成具有明确包依赖的lock文件
+
+选项:
+	无
+
+示例:
+nplc compile
+
+	]])
+end
+
 -- 编译package.npl文件成package.lock
 local function npm_compile(ctx)
-	local path = ctx.path
 	local package_config_filename = ctx.path .. "/package.npl"
+	local path = ctx.path
+	local ctx_args = ctx.arg or {}
+	local help = get_option_value(ctx_args, "-h") or get_option_value(ctx_args, "--help")
+	if help then
+		npm_compile_usage()
+		return
+	end
+
 	local force = get_option_value(ctx_args, "-f") or get_option_value(ctx_args, "--force")
 
 	if not g_file:is_exist(package_config_filename) then
@@ -286,10 +418,32 @@ local function npm_compile(ctx)
 	g_log.info("已成功生成package.lock")
 end
 
+local function npm_package_usage()
+	print([[
+nplc list [选项]
+描述:
+	打包当前目录，使用当前目打包生成一个zip并上传至包管理服务器
+
+选项:
+--help     打印帮助信息  短选项 -h
+
+示例:
+nplc package
+
+	]])
+end
+
 -- 打包目录
 local function npm_package(ctx)
-	local path = ctx.path .. "/"
 	local package_config_filename = path .. "package.npl"
+	local path = ctx.path .. "/"
+	local ctx_args = ctx.arg or {}
+	local help = get_option_value(ctx_args, "-h") or get_option_value(ctx_args, "--help")
+	
+	if help then
+		npm_package_usage()
+		return
+	end
 
 	local package_config = commonlib.LoadTableFromFile(package_config_filename)
 	if not package_config or not package_config.name or not package_config.version then
@@ -343,6 +497,22 @@ local function npm_package(ctx)
 	end
 end
 
+local function npm_usage()
+	print([[
+nplc package cmdname [args] [options]
+描述:
+    NPL包管理器命令
+
+命令:
+init     包初始化 生成配置文件
+install  安装包
+remove   删除包
+compile  编译包配置 生成具体版本包依赖配置文件
+package  生成安装包并上传至包服务器
+
+	]])
+end
+
 -- 入口函数
 return function(ctx)
 	local args = ctx.arg
@@ -370,6 +540,8 @@ return function(ctx)
 		npm_loader(ctx)
 	elseif cmd_name == "package" then
 		npm_package(ctx)
+	else
+		npm_usage()
 	end
 end
 

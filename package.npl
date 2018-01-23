@@ -1,12 +1,15 @@
 {
-  ["dependencies"] = {
-	["nws"] = {
-	  ["package_src"] = "wxaxiaoyao/nws",
-	},
-	["demo"] = "1.0.0",
-	["keepwork"] = "1.0.0",
-	["test"] = "1.0.0",
-  },
-  ["name"] = "keepwork",
-  ["version"] = "1.0.0",
-}
+      ["author"] = "unknow",
+      ["keywords"] = {
+        [1] = "keepwork",
+        [2] = "unknow",
+      },
+      ["version"] = "1.0.0",
+      ["description"] = "package description",
+      ["dependencies"] = {
+      },
+      ["repository"] = {
+      },
+      ["name"] = "keepwork",
+      ["rendme"] = "README.md",
+    }
